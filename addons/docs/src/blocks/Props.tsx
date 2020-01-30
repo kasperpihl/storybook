@@ -20,6 +20,7 @@ import { extractProps as vueExtractProps } from '../frameworks/vue/extractProps'
 
 interface PropsProps {
   exclude?: string[];
+  include?: string[];
   of?: '.' | Component;
   components?: {
     [label: string]: Component;
@@ -39,12 +40,15 @@ const inferPropsExtractor = (framework: string): PropsExtractor | null => {
   }
 };
 
-const filterRows = (rows: PropDef[], exclude: string[]) =>
-  rows && rows.filter((row: PropDef) => !exclude.includes(row.name));
+const filterRows = (rows: PropDef[], include: string[] = [], exclude: string[] = []) =>
+  rows &&
+  rows.filter(
+    (row: PropDef) => include.includes(row.name) || (!include.length && !exclude.includes(row.name))
+  );
 
 export const getComponentProps = (
   component: Component,
-  { exclude }: PropsProps,
+  { exclude, include }: PropsProps,
   { parameters }: DocsContextProps
 ): PropsTableProps => {
   if (!component) {
@@ -60,14 +64,14 @@ export const getComponentProps = (
       throw new Error(PropsTableError.PROPS_UNSUPPORTED);
     }
     let props = extractProps(component);
-    if (!isNil(exclude)) {
+    if (!isNil(exclude) || !isNil(include)) {
       const { rows } = props as PropsTableRowsProps;
       const { sections } = props as PropsTableSectionsProps;
       if (rows) {
-        props = { rows: filterRows(rows, exclude) };
+        props = { rows: filterRows(rows, include, exclude) };
       } else if (sections) {
         Object.keys(sections).forEach(section => {
-          sections[section] = filterRows(sections[section], exclude);
+          sections[section] = filterRows(sections[section], include, exclude);
         });
       }
     }
